@@ -8,8 +8,8 @@ typedef int Tid;
 
 typedef struct ThrdCtlBlk{
   Tid num;
+  ucontext_t tContext;
 } ThrdCtlBlk;
-
 
 /*
  * Tids between 0 and ULT_MAX_THREADS-1 may
@@ -25,6 +25,9 @@ static const Tid ULT_NONE = -4;
 static const Tid ULT_NOMORE = -5;
 static const Tid ULT_NOMEMORY = -6;
 static const Tid ULT_FAILED = -7;
+
+static int firstCalled = 0;
+static struct my_list queue;
 
 static inline int ULT_isOKRet(Tid ret){
   return (ret >= 0 ? 1 : 0);

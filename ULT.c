@@ -14,7 +14,14 @@
 Tid 
 ULT_CreateThread(void (*fn)(void *), void *parg)
 {
-  assert(0); /* TBD */
+
+	if (firstCalled == 0)
+	{
+		firstCalled = 1;
+		queue = malloc(sizeof(queue));
+	}
+		
+  //assert(0); /* TBD */
   return ULT_FAILED;
 }
 
