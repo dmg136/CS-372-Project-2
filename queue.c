@@ -21,11 +21,11 @@
 #include  <stdio.h>
 #include  <stdlib.h>
 #include  <string.h>
-
+#include "ULT.h"
 
 struct my_struct
 {
-  int num;
+  Tid data;
   struct my_struct* next;
 };
 
@@ -37,8 +37,8 @@ struct my_list
 };
 
 
-struct my_list* list_add_element( struct my_list*, const int);
-struct my_list* list_remove_element( struct my_list*);
+struct my_list* list_add_element( struct my_list*, const Tid);
+Tid list_remove_element( struct my_list*);
 
 
 struct my_list* list_new(void);
@@ -50,9 +50,9 @@ void list_print_element(const struct my_struct* );
 int main(void)
 {
   struct my_list*  mt = NULL;
-
+  
   mt = list_new();
-  list_add_element(mt, 3);
+  list_add_element(mt, 1);
   list_add_element(mt, 2);
   list_add_element(mt, 3);
   list_add_element(mt, 4); 
@@ -72,7 +72,7 @@ int main(void)
 }
 
 /* Will always return the pointer to my_list */
-struct my_list* list_add_element(struct my_list* s, const int i)
+struct my_list* list_add_element(struct my_list* s, const Tid t)
 {
 	struct my_struct* p = malloc( 1 * sizeof(*p) );
 
@@ -82,7 +82,7 @@ struct my_list* list_add_element(struct my_list* s, const int i)
 	  return s; 
 	}
 
-	p->num = i;
+	p->data = t;
 	p->next = NULL;
 
 
@@ -116,7 +116,7 @@ struct my_list* list_add_element(struct my_list* s, const int i)
 
 
 /* This is a queue and it is FIFO, so we will always remove the first element */
-struct my_list* list_remove_element( struct my_list* s )
+Tid list_remove_element( struct my_list* s )
 {
 	struct my_struct* h = NULL;
 	struct my_struct* p = NULL;
@@ -124,27 +124,29 @@ struct my_list* list_remove_element( struct my_list* s )
 	if( NULL == s )
 	{
 	  printf("List is empty\n");
-	  return s;
+	  return -4;
 	}
 	else if( NULL == s->head && NULL == s->tail )
 	{
 	  printf("Well, List is empty\n");
-	  return s;
+	  return -4;
 	}
 	else if( NULL == s->head || NULL == s->tail )
 	{
 	  printf("There is something seriously wrong with your list\n");
 	  printf("One of the head/tail is empty while other is not \n");
-	  return s;
+	  return -4;
 	}
 
+	Tid result;
 	h = s->head;
+	result = h->data;
 	p = h->next;
 	free(h);
 	s->head = p;
 	if( NULL == s->head )  s->tail = s->head;   /* The element tail was pointing to is free(), so we need an update */
 
-	return s;
+	return result;
 }
   
 
@@ -196,7 +198,7 @@ void list_print_element(const struct my_struct* p )
 {
 	if( p ) 
     {
-      printf("Num = %d\n", p->num);
+      printf("Num = %d\n", p->data);
     }
 	else
     {
