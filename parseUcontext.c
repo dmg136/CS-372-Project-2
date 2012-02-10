@@ -27,8 +27,8 @@ int main(int argc, char **argv)
   err = getcontext(&mycontext);
   assert(!err);
 
-  printf("A ucontext_t is %d bytes\n", -999);
-  assert(0); // TBD: Fill in ucontext size above. Hint: use sizeof().
+  printf("A ucontext_t is %d bytes\n", sizeof(mycontext));
+  //assert(0); // TBD: Fill in ucontext size above. Hint: use sizeof().
 
   unsigned int anotherSample = probeUCStack("Dummy argument.");
 
@@ -70,8 +70,8 @@ int main(int argc, char **argv)
    * Don't move on to the next part of the lab until you know how to change
    * the stack in a context when you manipulate a context to create a new thread.
    */
-  printf("The memory address of the local variable err is 0x%x\n", (unsigned int)-1);
-  printf("The memory address of the argument argc is 0x%x\n", (unsigned int)-1);
+  printf("The memory address of the local variable err is 0x%x\n", (unsigned int)&err);
+  printf("The memory address of the argument argc is 0x%x\n", (unsigned int)&argc);
   printf("The value of ucontext_t.uc_stack is 0x%x\n", (unsigned int)mycontext.uc_stack.ss_sp);
   printf("The value of anotherSample is 0x%x\n", anotherSample);
   printf("The stack pointer stored as one of the registers (ESP) in uc_mcontext is 0x%x\n", (unsigned int)-1);
@@ -100,6 +100,8 @@ int main(int argc, char **argv)
 unsigned int 
 probeUCStack(char *str)
 {
-  assert(0); /* Write code for this function */
+
+  
+  //assert(0); /* Write code for this function */
   return 0xFFFFFFFF;
 }
