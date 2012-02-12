@@ -44,8 +44,8 @@ int main(int argc, char **argv)
   /*
    * First, think about program counters (called eip in x86)
    */
-  printf("The memory address of the function main() is 0x%x\n", (unsigned int)-1);
-  printf("The memory address of the program counter (EIP) saved in mycontext is 0x%x\n", (unsigned int)-1);
+  printf("The memory address of the function main() is 0x%x\n", (unsigned int)main);
+  printf("The memory address of the program counter (EIP) saved in mycontext is 0x%x\n", (unsigned int)mycontext.uc_mcontext.gregs[REG_EIP]);
 
   /*
    * Now, think about stacks. [Note.  The code following these comments
@@ -74,11 +74,11 @@ int main(int argc, char **argv)
   printf("The memory address of the argument argc is 0x%x\n", (unsigned int)&argc);
   printf("The value of ucontext_t.uc_stack is 0x%x\n", (unsigned int)mycontext.uc_stack.ss_sp);
   printf("The value of anotherSample is 0x%x\n", anotherSample);
-  printf("The stack pointer stored as one of the registers (ESP) in uc_mcontext is 0x%x\n", (unsigned int)-1);
-  printf("The stack pointer stored as another one of the `registers` (UESP) in uc_mcontext is 0x%x\n", (unsigned int)-1);
+  printf("The stack pointer stored as one of the registers (ESP) in uc_mcontext is 0x%x\n", (unsigned int)mycontext.uc_mcontext.gregs[REG_ESP]);
+  printf("The stack pointer stored as another one of the `registers` (UESP) in uc_mcontext is 0x%x\n", (unsigned int)mycontext.uc_mcontext.gregs[REG_UESP]);
 
 
-  printf("The number of bytes pushed onto the stack between argc and err was 0x%x\n", (unsigned int)(0xFFFFFF));
+  printf("The number of bytes pushed onto the stack between argc and err was 0x%x\n", (unsigned int)&argc - (unsigned int)&err);
   /* Which is the right one to use? */
   printf("The number of bytes pushed onto the stack between err and when the stack was saved to mycontext was 0x%x\n", 
          (unsigned int)(-1));
@@ -101,7 +101,8 @@ unsigned int
 probeUCStack(char *str)
 {
 
-  
+  //getcontext(str);
   //assert(0); /* Write code for this function */
   return 0xFFFFFFFF;
+  //return; 
 }
