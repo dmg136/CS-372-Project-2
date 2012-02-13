@@ -10,7 +10,7 @@
 
 #define SOL 99
 
-unsigned int probeUCStack(char *string);
+unsigned int probeUCStack(ucontext_t s);
 
 int main(int argc, char **argv)
 {
@@ -27,10 +27,10 @@ int main(int argc, char **argv)
   err = getcontext(&mycontext);
   assert(!err);
 
-  printf("A ucontext_t is %d bytes\n", sizeof(mycontext));
+  printf("A ucontext_t is %d bytes\n", sizeof(ucontext_t));
   //assert(0); // TBD: Fill in ucontext size above. Hint: use sizeof().
 
-  unsigned int anotherSample = probeUCStack("Dummy argument.");
+  unsigned int anotherSample = probeUCStack(mycontext);
 
   /* 
    * Now, look inside of the ucontext you just saved.
@@ -44,7 +44,7 @@ int main(int argc, char **argv)
   /*
    * First, think about program counters (called eip in x86)
    */
-  printf("The memory address of the function main() is 0x%x\n", (unsigned int)main);
+  printf("The memory address of the function main() is 0x%x\n", (unsigned int)&main);
   printf("The memory address of the program counter (EIP) saved in mycontext is 0x%x\n", (unsigned int)mycontext.uc_mcontext.gregs[REG_EIP]);
 
   /*
@@ -81,7 +81,7 @@ int main(int argc, char **argv)
   printf("The number of bytes pushed onto the stack between argc and err was 0x%x\n", (unsigned int)&argc - (unsigned int)&err);
   /* Which is the right one to use? */
   printf("The number of bytes pushed onto the stack between err and when the stack was saved to mycontext was 0x%x\n", 
-         (unsigned int)(-1));
+         (unsigned int)&err - (unsigned int)&mycontext.uc_stack);
 
 
          return 0;  
@@ -98,11 +98,11 @@ int main(int argc, char **argv)
  * uc_stack.ss_sp saved in main().
  */
 unsigned int 
-probeUCStack(char *str)
+probeUCStack(ucontext_t s)
 {
 
-  //getcontext(str);
+  getcontext(&s);
   //assert(0); /* Write code for this function */
-  return 0xFFFFFFFF;
-  //return; 
+  //return 0xFFFFFFFF;
+  return *(int*)s.uc_stack.ss_sp; 
 }
