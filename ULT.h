@@ -6,14 +6,12 @@ typedef int Tid;
 #define ULT_MAX_THREADS 1024
 #define ULT_MIN_STACK 32768
 
+
+
 typedef struct ThrdCtlBlk{
-
-  struct ThrdCtlBlk *prev;
-  struct ThrdCtlBlk *next;
-  ucontext_t tContext;
-  Tid num;
-
+  /* ... Fill this in ... */
 } ThrdCtlBlk;
+
 
 /*
  * Tids between 0 and ULT_MAX_THREADS-1 may
@@ -29,11 +27,6 @@ static const Tid ULT_NONE = -4;
 static const Tid ULT_NOMORE = -5;
 static const Tid ULT_NOMEMORY = -6;
 static const Tid ULT_FAILED = -7;
-
-static int firstCalled = 0;	//createThread called for 1st time
-static int tids_available[ULT_MAX_THREADS];
-static int tidRunning = 0;
-static struct queue* readyQueue;	//the ready queue
 
 static inline int ULT_isOKRet(Tid ret){
   return (ret >= 0 ? 1 : 0);
