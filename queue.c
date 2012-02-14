@@ -27,11 +27,6 @@ int main(void)
 #include <assert.h>
 #include "queue.h"
 
-void context_init(ucontext_t* newContext)
-{
-	
-}
-
 Tid available_tid()
 {
 	int find, pos;
@@ -53,7 +48,6 @@ Tid available_tid()
 
 Tid list_add_element(queue* readyQueue)
 {
-	ThrdCtlBlk* new_tcb = malloc( sizeof(ThrdCtlBlk) );
 
 	if ( NULL == readyQueue )
 	{
@@ -61,25 +55,30 @@ Tid list_add_element(queue* readyQueue)
 	  return ULT_FAILED;
 	}
 	
-	else if( NULL == new_tcb )
-	{
-	  fprintf(stderr, "IN %s, %s: new_tcb malloc() failed\n", __FILE__, "list_add");
-	  return ULT_NOMEMORY;
-	}
-	
 	else if( NULL == readyQueue->head && NULL == readyQueue->tail )
 	{
-	  //printf("Empty list, adding p->num: %d\n\n", p->num);
 	  
 	  int availTid = available_tid();
 	  
 	  if (availTid == ULT_NOMORE)
 		return ULT_NOMORE;
+
+	  ThrdCtlBlk* new_tcb = malloc( sizeof(ThrdCtlBlk) );
+	  
+	  if( NULL == new_tcb )
+	  {
+	    fprintf(stderr, "IN %s, %s: new_tcb malloc() failed\n", __FILE__, "list_add");
+	    return ULT_NOMEMORY;
+	  }
+
 	  
 	  new_tcb->num = availTid;
-	  context_init(&new_tcb->tContext);
+	  new_tcb->prev = NULL;
+	  new_tcb->next = NULL;
+	  int ret = context_init(&(new_tcb->tContext));
+	  assert(ret == 0);
 	  
-	  readyQueue->head->next = new_tcb;
+	  readyQueue->head = new_tcb;
 	  readyQueue->tail = new_tcb;
 	  
 	  readyQueue->numTCB++;
@@ -89,12 +88,18 @@ Tid list_add_element(queue* readyQueue)
 	else if( NULL == readyQueue->head || NULL == readyQueue->tail )
 	{
 	  fprintf(stderr, "There is something seriously wrong with your assignment of head/tail to the list\n");
-	  free(new_tcb);
 	  return ULT_INVALID;
 	}
 	else
 	{
 	  // printf("List not empty, adding element to tail\n");
+	  ThrdCtlBlk* new_tcb = malloc( sizeof(ThrdCtlBlk) );
+	  
+	if( NULL == new_tcb )
+	{
+	  fprintf(stderr, "IN %s, %s: new_tcb malloc() failed\n", __FILE__, "list_add");
+	  return ULT_NOMEMORY;
+	}
 	  
 	  int availTid = available_tid();
 	  
@@ -102,10 +107,11 @@ Tid list_add_element(queue* readyQueue)
 		return ULT_NOMORE;
 	  
 	  new_tcb->num = availTid;
-	  context_init(&new_tcb->tContext);
+	  //context_init(&(new_tcb->tContext));
+	  new_tcb->prev = readyQueue->tail;
+	  new_tcb->next = NULL;
 	  
 	  readyQueue->tail->next = new_tcb;
-	  new_tcb->prev = readyQueue->tail;
 	  readyQueue->tail = new_tcb;
 	  
 	  readyQueue->numTCB++;
@@ -114,33 +120,88 @@ Tid list_add_element(queue* readyQueue)
 	}
 }
 
-
-/* This is a queue and it is FIFO, so we will always remove the first element */
-Tid list_remove_element( queue* readyQueue, const Tid tid )
+Tid list_remove_head( queue* readyQueue )
 {
-	//struct my_struct* h = NULL;
-	//struct my_struct* p = NULL;
 
 	if( NULL == readyQueue )
 	{
-	  printf("ULT_NONE: No queue passed in, List is empty\n");
-	  return ULT_NONE;
+	  printf("ULT_INVALID: No queue passed in, List is empty\n");
+	  return ULT_INVALID;
+	}
+	
+	else if( NULL == readyQueue->head && NULL == readyQueue->tail )
+	{
+	  printf("ULT_INVALID: Head and tail null, List is empty\n");
+	  return ULT_INVALID;
+	}
+	
+	else if( NULL == readyQueue->head || NULL == readyQueue->tail )
+	{
+	  printf("ULT_INVALID: One of the head/tail is empty while other is not \n");
+	  return ULT_INVALID;
+	}
+
+	ThrdCtlBlk* temp = readyQueue->head;
+	
+	int tempTid = temp->num;
+	
+	if ( NULL == temp->prev && NULL == temp->next )
+	{
+		readyQueue->head = NULL;
+		readyQueue->tail = NULL;
+	}
+	
+	else if ( NULL == temp->prev && NULL != temp->next )
+	{
+		readyQueue->head = temp->next;
+		readyQueue->head->prev = NULL;
+		temp->next = NULL;
+	}
+	
+	else if ( NULL != temp->prev && NULL != temp->next )
+	{
+		temp->next->prev = temp->prev;
+		temp->prev->next = temp->next;
+		temp->prev = NULL;
+		temp->next = NULL;
+	}
+	
+	else if ( NULL != temp->prev && NULL == temp->next )
+	{
+		temp->prev->next = NULL;
+		temp->prev = NULL;
+	}
+	
+	readyQueue->numTCB--;	
+	tids_available[tempTid] = 0;
+	free(temp);
+	
+	return tempTid;
+}
+
+Tid list_remove_element( queue* readyQueue, const Tid tid )
+{
+
+	if( NULL == readyQueue )
+	{
+	  printf("ULT_INVALID: No queue passed in, List is empty\n");
+	  return ULT_INVALID;
 	}
 	else if( NULL == readyQueue->head && NULL == readyQueue->tail )
 	{
-	  printf("ULT_NONE: Head and tail null, List is empty\n");
-	  return ULT_NONE;
+	  printf("ULT_INVALID: Head and tail null, List is empty\n");
+	  return ULT_INVALID;
 	}
 	else if( NULL == readyQueue->head || NULL == readyQueue->tail )
 	{
-	  printf("ULT_NONE: There is something seriously wrong with your list\n");
-	  printf("One of the head/tail is empty while other is not \n");
-	  return ULT_NONE;
+	  printf("ULT_INVALID: One of the head/tail is empty while other is not \n");
+	  return ULT_INVALID;
 	}
 	
 	ThrdCtlBlk* temp = readyQueue->head;
 	
 	int found = 0;
+	int pos = 0;
 	while (NULL != temp)
 	{
 		if (temp->num == tid)
@@ -149,29 +210,47 @@ Tid list_remove_element( queue* readyQueue, const Tid tid )
 			break;
 		}
 		else
+		{
+			pos++;
 			temp = temp->next;
+		}
 	}
 	
 	//tid not found
-	if (NULL == temp)
+	if (!found)
 		return ULT_INVALID;
 	
 	//change pointers and free found tcb
-	if (temp == readyQueue->head)
-		readyQueue->head = temp->next;
 	
-	else if( NULL == readyQueue->head )
-		readyQueue->tail = readyQueue->head;   //The element tail was pointing to is free(), so we need an update
-
-	else
+	if ( NULL == temp->prev && NULL == temp->next )
 	{
+		readyQueue->head = NULL;
+		readyQueue->tail = NULL;
+	}
+	
+	else if ( NULL == temp->prev && NULL != temp->next )
+	{
+		readyQueue->head = temp->next;
+		readyQueue->head->prev = NULL;
+		temp->next = NULL;
+	}
+	
+	else if ( NULL != temp->prev && NULL != temp->next )
+	{
+		temp->next->prev = temp->prev;
 		temp->prev->next = temp->next;
-		
-		if (NULL != temp->next)
-			temp->next->prev = temp->prev;
+		temp->prev = NULL;
+		temp->next = NULL;
+	}
+	
+	else if ( NULL != temp->prev && NULL == temp->next )
+	{
+		temp->prev->next = NULL;
+		temp->prev = NULL;
 	}
 	
 	readyQueue->numTCB--;
+	tids_available[pos] = 0;
 	free(temp);
 	return tid;
 }
@@ -234,6 +313,13 @@ void list_print( queue* readyQueue )
 	else
     {
 	  ThrdCtlBlk* temp = readyQueue->head;
+	  
+	  if (NULL == temp)
+	  {
+		printf("list is empty\n");
+		return;
+	  }
+	  
 	  int pos = 0;
       while ( NULL != temp )
 		{
@@ -243,7 +329,42 @@ void list_print( queue* readyQueue )
 		}
     }
 
-  printf("\n----------------------------\n");
+	printf("\n----------------------------\n");
+}
+
+void list_print_backwards( queue* readyQueue )
+{
+	if( NULL == readyQueue )
+	{
+		printf("\nlist_print: passed in invalid queue\n");
+		return;
+	}
+	
+	else
+    {
+	  ThrdCtlBlk* temp = readyQueue->tail;
+	  
+	  if (NULL == temp)
+	  {
+		printf("list is empty\n");
+		return;
+	  }
+	  
+	  int pos = readyQueue->numTCB - 1;
+      while ( NULL != temp )
+		{
+			printf("[%d]: %d ", pos, temp->num);
+			pos--;
+			temp = temp->prev;
+		}
+    }
+
+	printf("\n----------------------------\n");
+}
+
+int context_init(ucontext_t* newContext)
+{
+	return 0;
 }
 
 /*
