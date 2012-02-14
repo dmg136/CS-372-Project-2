@@ -145,12 +145,14 @@ Tid list_remove_head( queue* readyQueue )
 	
 	int tempTid = temp->num;
 	
+	//only 1 element left
 	if ( NULL == temp->prev && NULL == temp->next )
 	{
 		readyQueue->head = NULL;
 		readyQueue->tail = NULL;
 	}
 	
+	//at head of queue
 	else if ( NULL == temp->prev && NULL != temp->next )
 	{
 		readyQueue->head = temp->next;
@@ -158,6 +160,8 @@ Tid list_remove_head( queue* readyQueue )
 		temp->next = NULL;
 	}
 	
+	/*
+	//somewhere in the middle
 	else if ( NULL != temp->prev && NULL != temp->next )
 	{
 		temp->next->prev = temp->prev;
@@ -166,11 +170,14 @@ Tid list_remove_head( queue* readyQueue )
 		temp->next = NULL;
 	}
 	
+	//at tail of queue
 	else if ( NULL != temp->prev && NULL == temp->next )
 	{
+		readyQueue->tail = temp->prev;
 		temp->prev->next = NULL;
 		temp->prev = NULL;
 	}
+	*/
 	
 	readyQueue->numTCB--;	
 	tids_available[tempTid] = 0;
@@ -201,7 +208,7 @@ Tid list_remove_element( queue* readyQueue, const Tid tid )
 	ThrdCtlBlk* temp = readyQueue->head;
 	
 	int found = 0;
-	int pos = 0;
+	
 	while (NULL != temp)
 	{
 		if (temp->num == tid)
@@ -210,10 +217,7 @@ Tid list_remove_element( queue* readyQueue, const Tid tid )
 			break;
 		}
 		else
-		{
-			pos++;
 			temp = temp->next;
-		}
 	}
 	
 	//tid not found
@@ -222,12 +226,14 @@ Tid list_remove_element( queue* readyQueue, const Tid tid )
 	
 	//change pointers and free found tcb
 	
+	//only 1 element left
 	if ( NULL == temp->prev && NULL == temp->next )
 	{
 		readyQueue->head = NULL;
 		readyQueue->tail = NULL;
 	}
 	
+	//at head of queue
 	else if ( NULL == temp->prev && NULL != temp->next )
 	{
 		readyQueue->head = temp->next;
@@ -235,6 +241,7 @@ Tid list_remove_element( queue* readyQueue, const Tid tid )
 		temp->next = NULL;
 	}
 	
+	//in the middle somewhere
 	else if ( NULL != temp->prev && NULL != temp->next )
 	{
 		temp->next->prev = temp->prev;
@@ -243,14 +250,16 @@ Tid list_remove_element( queue* readyQueue, const Tid tid )
 		temp->next = NULL;
 	}
 	
+	//at tail of queue
 	else if ( NULL != temp->prev && NULL == temp->next )
 	{
+		readyQueue->tail = temp->prev;
 		temp->prev->next = NULL;
 		temp->prev = NULL;
 	}
 	
 	readyQueue->numTCB--;
-	tids_available[pos] = 0;
+	tids_available[tid] = 0;
 	free(temp);
 	return tid;
 }

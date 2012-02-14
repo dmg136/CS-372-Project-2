@@ -42,7 +42,6 @@ void main()
 	list_print(myQueue);
 	list_print_backwards(myQueue);
 	
-	/*
 	//TESTS FOR LIST_REMOVE_HEAD
 	printf("\ntest remove first element 3 times\n");
 	ret = list_remove_head(myQueue);
@@ -77,8 +76,8 @@ void main()
 	printf("\ninside queue, %d elements\n", myQueue->numTCB);
 	list_print(myQueue);
 	list_print_backwards(myQueue);
-	*/
 	
+	/*
 	//TESTS FOR LIST_REMOVE_ELEMENT
 	printf("\ntest remove third element\n");
 	ret = list_remove_element(myQueue, 2);
@@ -147,5 +146,5 @@ void main()
 	printf("\ninside queue, %d elements\n", myQueue->numTCB);
 	list_print(myQueue);
 	list_print_backwards(myQueue);
-	
+	*/
 }
