@@ -1,55 +1,7 @@
-/* This Queue implementation of singly linked list in C implements 3 
- * operations: add, remove and print elements in the list.  Well, actually, 
- * it implements 4 operations, lats one is list_free() but free() should not 
- * be considered the operation but  a mandatory practice like brushing 
- * teeth every morning, otherwise you will end up loosing some part of 
- * your body(the software) Its is the modified version of my singly linked 
- * list suggested by Ben from comp.lang.c . I was using one struct to do 
- * all the operations but Ben added a 2nd struct to make things easier and 
- * efficient.
- *
- * I was always using the strategy of searching through the list to find the
- *  end and then addd the value there. That way list_add() was O(n). Now I 
- * am keeping track of tail and always use  tail to add to the linked list, so 
- * the addition is always O(1), only at the cost of one assignment.
- *
- *
- * VERISON 0.5
- *
- */
-
-#include  <stdio.h>
-#include  <stdlib.h>
-#include  <string.h>
-#include "ULT.h"
-
-struct my_struct
-{
-  Tid data;
-  struct my_struct* next;
-};
-
-
-struct my_list
-{
-  struct my_struct* head;
-  struct my_struct* tail;
-};
-
-
-struct my_list* list_add_element( struct my_list*, const Tid);
-Tid list_remove_element( struct my_list*);
-
-
-struct my_list* list_new(void);
-struct my_list* list_free( struct my_list* );
-
-void list_print( const struct my_list* );
-void list_print_element(const struct my_struct* );
-
+/*
 int main(void)
 {
-  struct my_list*  mt = NULL;
+  struct ThrdCtlBlk*  mt = NULL;
   
   mt = list_new();
   list_add_element(mt, 1);
@@ -62,139 +14,240 @@ int main(void)
   list_remove_element(mt);
   list_print(mt);
 
-  list_free(mt);   /* always remember to free() the malloc()ed memory */
-  free(mt);        /* free() if list is kept separate from free()ing the structure, I think its a good design */
-  mt = NULL;      /* after free() always set that pointer to NULL, C will run havon on you if you try to use a dangling pointer */
+  list_free(mt);   // always remember to free() the malloc()ed memory
+  free(mt);        // free() if list is kept separate from free()ing the structure, I think its a good design
+  mt = NULL;      // after free() always set that pointer to NULL, C will run havon on you if you try to use a dangling pointer
 
   list_print(mt);
 
   return 0;
 }
+*/
 
-/* Will always return the pointer to my_list */
-struct my_list* list_add_element(struct my_list* s, const Tid t)
+#include <assert.h>
+#include "queue.h"
+
+void context_init(ucontext_t* newContext)
 {
-	struct my_struct* p = malloc( 1 * sizeof(*p) );
+	
+}
 
-	if( NULL == p )
+Tid available_tid()
+{
+	int find, pos;
+	for (pos = 0; pos < ULT_MAX_THREADS; pos++)
 	{
-	  fprintf(stderr, "IN %s, %s: malloc() failed\n", __FILE__, "list_add");
-	  return s; 
+		if (tids_available[pos] == 0)
+		{
+			find = pos;
+			tids_available[pos] = 1;
+			break;
+		}
 	}
+	
+	if (find >= ULT_MAX_THREADS)
+		return ULT_NOMORE;
+	else
+		return find;
+}
 
-	p->data = t;
-	p->next = NULL;
+Tid list_add_element(queue* readyQueue)
+{
+	ThrdCtlBlk* new_tcb = malloc( sizeof(ThrdCtlBlk) );
 
-
-	if( NULL == s )
+	if ( NULL == readyQueue )
 	{
-	  printf("Queue not initialized\n");
-	  free(p);
-	  return s;
+	  printf("don't pass in null as queue structure in list_add\n");
+	  return ULT_FAILED;
 	}
-	else if( NULL == s->head && NULL == s->tail )
+	
+	else if( NULL == new_tcb )
 	{
-	  /* printf("Empty list, adding p->num: %d\n\n", p->num);  */
-	  s->head = s->tail = p;
-	  return s;
+	  fprintf(stderr, "IN %s, %s: new_tcb malloc() failed\n", __FILE__, "list_add");
+	  return ULT_NOMEMORY;
 	}
-	else if( NULL == s->head || NULL == s->tail )
+	
+	else if( NULL == readyQueue->head && NULL == readyQueue->tail )
+	{
+	  //printf("Empty list, adding p->num: %d\n\n", p->num);
+	  
+	  int availTid = available_tid();
+	  
+	  if (availTid == ULT_NOMORE)
+		return ULT_NOMORE;
+	  
+	  new_tcb->num = availTid;
+	  context_init(&new_tcb->tContext);
+	  
+	  readyQueue->head->next = new_tcb;
+	  readyQueue->tail = new_tcb;
+	  
+	  readyQueue->numTCB++;
+	  
+	  return availTid;
+	}
+	else if( NULL == readyQueue->head || NULL == readyQueue->tail )
 	{
 	  fprintf(stderr, "There is something seriously wrong with your assignment of head/tail to the list\n");
-	  free(p);
-	  return NULL;
+	  free(new_tcb);
+	  return ULT_INVALID;
 	}
 	else
 	{
-	  /* printf("List not empty, adding element to tail\n"); */
-	  s->tail->next = p;
-	  s->tail = p;
+	  // printf("List not empty, adding element to tail\n");
+	  
+	  int availTid = available_tid();
+	  
+	  if (availTid == ULT_NOMORE)
+		return ULT_NOMORE;
+	  
+	  new_tcb->num = availTid;
+	  context_init(&new_tcb->tContext);
+	  
+	  readyQueue->tail->next = new_tcb;
+	  new_tcb->prev = readyQueue->tail;
+	  readyQueue->tail = new_tcb;
+	  
+	  readyQueue->numTCB++;
+	  
+	  return availTid;
 	}
-
-	return s;
 }
 
 
 /* This is a queue and it is FIFO, so we will always remove the first element */
-Tid list_remove_element( struct my_list* s )
+Tid list_remove_element( queue* readyQueue, const Tid tid )
 {
-	struct my_struct* h = NULL;
-	struct my_struct* p = NULL;
+	//struct my_struct* h = NULL;
+	//struct my_struct* p = NULL;
 
-	if( NULL == s )
+	if( NULL == readyQueue )
 	{
-	  printf("List is empty\n");
-	  return -4;
+	  printf("ULT_NONE: No queue passed in, List is empty\n");
+	  return ULT_NONE;
 	}
-	else if( NULL == s->head && NULL == s->tail )
+	else if( NULL == readyQueue->head && NULL == readyQueue->tail )
 	{
-	  printf("Well, List is empty\n");
-	  return -4;
+	  printf("ULT_NONE: Head and tail null, List is empty\n");
+	  return ULT_NONE;
 	}
-	else if( NULL == s->head || NULL == s->tail )
+	else if( NULL == readyQueue->head || NULL == readyQueue->tail )
 	{
-	  printf("There is something seriously wrong with your list\n");
+	  printf("ULT_NONE: There is something seriously wrong with your list\n");
 	  printf("One of the head/tail is empty while other is not \n");
-	  return -4;
+	  return ULT_NONE;
 	}
-
-	Tid result;
-	h = s->head;
-	result = h->data;
-	p = h->next;
-	free(h);
-	s->head = p;
-	if( NULL == s->head )  s->tail = s->head;   /* The element tail was pointing to is free(), so we need an update */
-
-	return result;
-}
-  
-
-/* ---------------------- small helper fucntions ---------------------------------- */
-struct my_list* list_free( struct my_list* s )
-{
-	while( s->head )
+	
+	ThrdCtlBlk* temp = readyQueue->head;
+	
+	int found = 0;
+	while (NULL != temp)
 	{
-	  list_remove_element(s);
-	}
-
-	return s;
-}
-
-struct my_list* list_new(void)
-{
-
-	struct my_list* p = malloc( 1 * sizeof(*p));
-
-	if( NULL == p )
-	{
-	  fprintf(stderr, "LINE: %d, malloc() failed\n", __LINE__);
-	}
-
-	p->head = p->tail = NULL;
-
-	return p;
-}
-
-
-void list_print( const struct my_list* ps )
-{
-  
-	struct my_struct* p = NULL;
-
-	if( ps )
-    {
-      for( p = ps->head; p; p = p->next )
+		if (temp->num == tid)
 		{
-			list_print_element(p);
+			found = 1;
+			break;
+		}
+		else
+			temp = temp->next;
+	}
+	
+	//tid not found
+	if (NULL == temp)
+		return ULT_INVALID;
+	
+	//change pointers and free found tcb
+	if (temp == readyQueue->head)
+		readyQueue->head = temp->next;
+	
+	else if( NULL == readyQueue->head )
+		readyQueue->tail = readyQueue->head;   //The element tail was pointing to is free(), so we need an update
+
+	else
+	{
+		temp->prev->next = temp->next;
+		
+		if (NULL != temp->next)
+			temp->next->prev = temp->prev;
+	}
+	
+	readyQueue->numTCB--;
+	free(temp);
+	return tid;
+}
+  
+/*
+Tid list_free( ThrdCtlBlk* t )
+{
+	int freeTid;
+	
+	ThrdCtlBlk* find = t;
+	
+	while( t->next )
+	{
+	  list_remove_element(t);
+	}
+
+	return freeTid;
+}
+*/
+
+queue* list_new(void)
+{
+
+	queue* readyQueue = malloc( sizeof(queue) );
+
+	if( NULL == readyQueue )
+	{
+	  fprintf(stderr, "LINE: %d, new queue malloc() failed\n", __LINE__);
+	  return NULL;
+	}
+
+	readyQueue->head = readyQueue->tail = NULL;
+	readyQueue->numTCB = 1;
+	
+	tids_available[0] = 1;
+	
+	//set up initial current running thread
+	ThrdCtlBlk *firstTCB = malloc(sizeof(ThrdCtlBlk));
+	int ret = getcontext( &(firstTCB->tContext) );
+	assert(ret == 0);
+	
+	firstTCB->num = 0;
+	firstTCB->prev = firstTCB->next = NULL;
+	
+	readyQueue->tidRunning = firstTCB;
+	readyQueue->head = firstTCB;
+	readyQueue->tail = firstTCB;
+	return readyQueue;
+}
+
+void list_print( queue* readyQueue )
+{
+
+	if( NULL == readyQueue )
+	{
+		printf("\nlist_print: passed in invalid queue\n");
+		return;
+	}
+	
+	else
+    {
+	  ThrdCtlBlk* temp = readyQueue->head;
+	  int pos = 0;
+      while ( NULL != temp )
+		{
+			printf("[%d]: %d ", pos, temp->num);
+			pos++;
+			temp = temp->next;
 		}
     }
 
-  printf("------------------\n");
+  printf("\n----------------------------\n");
 }
 
-
-void list_print_element(const struct my_struct* p )
+/*
+void list_print_element(const ThrdCtlBlk* p )
 {
 	if( p ) 
     {
@@ -205,3 +258,4 @@ void list_print_element(const struct my_struct* p )
       printf("Can not print NULL struct \n");
     }
 }
+*/
